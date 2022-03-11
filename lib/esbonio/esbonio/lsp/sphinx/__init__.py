@@ -54,6 +54,7 @@ except ImportError:
 DEFAULT_MODULES = [
     "esbonio.lsp.directives",
     "esbonio.lsp.roles",
+    "esbonio.lsp.myst",
     "esbonio.lsp.sphinx.codeblocks",
     "esbonio.lsp.sphinx.domains",
     "esbonio.lsp.sphinx.images",

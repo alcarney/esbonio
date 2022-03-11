@@ -6,7 +6,6 @@ Getting Started
 This section contains notes on how to use the Language Server with your text
 editor of choice.
 
-
 .. relevant-to:: VSCode
    :category: Editor:
 

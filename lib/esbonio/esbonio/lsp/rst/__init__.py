@@ -390,6 +390,7 @@ class RstLanguageServer(LanguageServer):
         This will return one of the following values:
 
         - ``rst``: Indicates that the position is within an ``*.rst`` document
+        - ``markdown``: Indicates that the position is within an ``*.md`` document
         - ``py``: Indicates that the position is within code in a ``*.py`` document
         - ``docstring``: Indicates that the position is within a docstring in a
           ``*.py`` document.
@@ -414,6 +415,9 @@ class RstLanguageServer(LanguageServer):
             source = self.text_to_position(doc, position)
             count = len(TRIPLE_QUOTE.findall(source))
             return "py" if count % 2 == 0 else "docstring"
+
+        if ext in {".markdown", ".md"}:
+            return "markdown"
 
         # Fallback to rst
         self.logger.debug("Unable to determine location type for uri: %s", doc.uri)

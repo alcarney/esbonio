@@ -42,6 +42,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_panels",
+    "myst_parser",
     "esbonio.tutorial",
     "collection_items",
     "relevant_to",

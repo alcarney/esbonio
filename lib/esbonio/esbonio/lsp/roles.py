@@ -267,15 +267,13 @@ class Roles(LanguageFeature):
         """
 
         # Do not suggest completions within the middle of Python code.
-        if context.location == "py":
+        if context.location not in {"rst", "docstring"}:
             return []
-
-        groups = context.match.groupdict()
-        target = groups["target"]
 
         # All text matched by the regex
         text = context.match.group(0)
         start, end = context.match.span()
+        target = context.match.group("target")
 
         if target:
             target_index = start + text.find(target)
@@ -356,7 +354,8 @@ class Roles(LanguageFeature):
                 kind=CompletionItemKind.Function,
                 detail=f"{dotted_name}",
                 filter_text=insert_text,
-                text_edit=TextEdit(range=range_, new_text=insert_text),
+                insert_text=insert_text,
+                # text_edit=TextEdit(range=range_, new_text=insert_text),
                 data={"completion_type": "role"},
             )
 

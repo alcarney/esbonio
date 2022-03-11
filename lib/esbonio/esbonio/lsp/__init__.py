@@ -177,7 +177,7 @@ def _configure_lsp_methods(server: RstLanguageServer) -> RstLanguageServer:
     @server.feature(
         COMPLETION,
         CompletionOptions(
-            trigger_characters=[".", ":", "`", "<", "/"], resolve_provider=True
+            trigger_characters=[".", ":", "`", "<", "/", "{"], resolve_provider=True
         ),
     )
     def on_completion(ls: RstLanguageServer, params: CompletionParams):
