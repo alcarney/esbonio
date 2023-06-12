@@ -279,7 +279,7 @@ async def test_initialization(
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -342,7 +342,7 @@ async def test_initialization_build_dir(converter):
 
         test = make_client_server(config)
         try:
-            test.start()
+            await test.start()
             await test.client.initialize_session(
                 InitializeParams(
                     capabilities=ClientCapabilities(),
@@ -400,7 +400,7 @@ async def test_initialization_build_dir_workspace_var(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -457,7 +457,7 @@ async def test_initialization_build_dir_workspace_folder(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -514,7 +514,7 @@ async def test_initialization_build_dir_confdir(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -567,7 +567,7 @@ async def test_initialization_sphinx_error():
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -625,7 +625,7 @@ async def test_initialization_build_error():
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -669,7 +669,7 @@ async def test_initialization_missing_conf():
         test = make_client_server(config)
 
         try:
-            test.start()
+            await test.start()
             await test.client.initialize_session(
                 InitializeParams(
                     capabilities=ClientCapabilities(),
@@ -713,7 +713,7 @@ async def test_initialization_verbosity(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -760,7 +760,7 @@ async def test_initialization_hide_sphinx_output(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -804,7 +804,7 @@ async def test_initialization_silent(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -848,7 +848,7 @@ async def test_initialization_quiet(converter):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -962,7 +962,7 @@ async def test_diagnostics(good, bad, expected):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1002,7 +1002,7 @@ async def test_diagnostics(good, bad, expected):
             )
         )
 
-        await test.client.lsp.wait_for_notification_async("esbonio/buildComplete")
+        await test.client.protocol.wait_for_notification_async("esbonio/buildComplete")
         actual = test.client.diagnostics[test_uri][0]
 
         assert actual.range == expected.range
@@ -1028,7 +1028,7 @@ async def test_diagnostics(good, bad, expected):
         )
 
         # Ensure that we remove any resolved diagnostics.
-        await test.client.lsp.wait_for_notification_async("esbonio/buildComplete")
+        await test.client.protocol.wait_for_notification_async("esbonio/buildComplete")
         assert len(test.client.diagnostics[test_uri]) == 0
 
         test.client.text_document_did_close(
@@ -1109,7 +1109,7 @@ async def test_live_build_clears_diagnostics(good, bad, expected):
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1247,7 +1247,7 @@ image file not readable: notfound.png""",
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1287,7 +1287,7 @@ image file not readable: notfound.png""",
             )
         )
 
-        await test.client.lsp.wait_for_notification_async("esbonio/buildComplete")
+        await test.client.protocol.wait_for_notification_async("esbonio/buildComplete")
         actual = test.client.diagnostics[test_uri][0]
 
         assert actual.range == diagnostic.range
@@ -1301,7 +1301,7 @@ image file not readable: notfound.png""",
             DeleteFilesParams(files=[FileDelete(uri=test_uri)])
         )
 
-        await test.client.lsp.wait_for_notification_async("esbonio/buildComplete")
+        await test.client.protocol.wait_for_notification_async("esbonio/buildComplete")
         assert len(test.client.diagnostics[test_uri]) == 0
 
     finally:
@@ -1331,7 +1331,7 @@ async def test_preview_default():
     test = make_client_server(config)
 
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1377,7 +1377,7 @@ async def test_preview_no_show():
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1421,7 +1421,7 @@ async def test_preview_multiple_calls():
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
@@ -1478,7 +1478,7 @@ async def test_preview_wrong_builder(builder):
 
     test = make_client_server(config)
     try:
-        test.start()
+        await test.start()
         await test.client.initialize_session(
             InitializeParams(
                 capabilities=ClientCapabilities(),
