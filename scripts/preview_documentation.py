@@ -1,123 +1,210 @@
-"""Script to preview completion item documentation."""
+# /// script
+# requires-python = ">=3.13"
+# dependencies = ["textual"]
+# ///
+"""Simple textual app to help preview the documentation rendered by the update_<>.py scripts.
 
-import argparse
+Full disclosure, Claude 4 Sonnet wrote the intiial implementation of this..
+"""
+
 import json
-import re
+from pathlib import Path
+from typing import Any, Dict, List
 
-from rich.markdown import Markdown
-from rich.panel import Panel
-from textual.app import App
-from textual.widget import Widget
-from textual.widgets import Footer
-from textual.widgets import Header
-from textual.widgets import ScrollView
-
-
-class ItemList(Widget):
-    def __init__(self, items, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.items = items
-        self.selected = -1
-
-    def render(self) -> Panel:
-        content = []
-        for idx, item in enumerate(self.items):
-            name = item[: item.index("(")]
-            if idx == self.selected:
-                content.append(f"[bold]{name}[/bold]")
-            else:
-                content.append(name)
-
-        return Panel("\n".join(content))
-
-    def select_next(self):
-        self.selected += 1
-        if self.selected >= len(self.items):
-            self.selected = 0
-
-        self.refresh()
-        return self.items[self.selected]
-
-    def select_previous(self):
-        self.selected -= 1
-        if self.selected < 0:
-            self.selected = len(self.items) - 1
-
-        self.refresh()
-        return self.items[self.selected]
-
-
-class DocViewer(App):
-    """A simple app for viewing bundled CompletionItem documentation."""
-
-    def __init__(self, filenames, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.filenames = filenames
-        self.documentation = {}
-        self.reload_files()
-
-    def reload_files(self):
-        docs = {}
-        for file in self.filenames:
-            with open(file) as f:
-                docs.update(json.load(f))
-
-        self.documentation = docs
-
-    async def on_load(self):
-        await self.bind("q", "quit", "Quit")
-        await self.bind("n", "select_next", "Next")
-        await self.bind("p", "select_previous", "Previous")
-        await self.bind("r", "reload", "Reload")
-
-    async def on_mount(self):
-        """Constructs the UI."""
-        await self.view.dock(Header(tall=False), edge="top")
-        await self.view.dock(Footer(), edge="bottom")
-
-        self.preview = ScrollView()
-        self.items = ItemList(sorted(self.documentation.keys()))
-
-        await self.view.dock(
-            ScrollView(self.items), edge="left", size=48, name="sidebar"
-        )
-        await self.view.dock(self.preview, edge="top")
-        await self.action_select_next()
-
-    async def action_reload(self):
-        self.reload_files()
-        self.items.selected = -1
-        self.items.items = sorted(self.documentation.keys())
-        await self.action_select_next()
-
-    async def action_select_next(self):
-        key = self.items.select_next()
-        await self.render_item(key)
-
-    async def action_select_previous(self):
-        key = self.items.select_previous()
-        await self.render_item(key)
-
-    async def render_item(self, key):
-        doc = self.documentation[key]
-        content = [
-            re.match(r".+\((.+)\)", key).group(1),
-            "",
-            "----",
-            "",
-            *doc["description"],
-        ]
-        md = Markdown("\n".join(content))
-
-        await self.preview.update(Panel(md))
-
-
-cli = argparse.ArgumentParser(
-    description="Preview the CompletionItem documentation we bundle with the language server."
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
+from textual.widgets import (
+    Footer,
+    Header,
+    Label,
+    ListItem,
+    ListView,
+    Markdown,
+    TextArea,
 )
-cli.add_argument("files", nargs="+")
+
+
+class DirectivesBrowserApp(App):
+    """A Textual app for browsing reStructuredText directives documentation."""
+
+    CSS = """
+    #list-container {
+        width: 40%;
+        border: solid $primary;
+    }
+
+    #markdown-container {
+        overflow-y: auto;
+    }
+
+    ListView {
+        height: 100%;
+    }
+
+    Markdown {
+        width: 100%;
+        margin: 1;
+    }
+
+    .directive-item {
+        color: $text;
+        padding: 0 1;
+    }
+
+    .directive-item:hover {
+        background: $primary 20%;
+    }
+    """
+
+    BINDINGS = [
+        Binding("q", "quit", "Quit"),
+        Binding("r", "reload", "Reload"),
+    ]
+
+    def __init__(self, data_file: str):
+        super().__init__()
+        self.data = None
+        self.data_file = data_file
+        self.items = []
+        self.load_data()
+
+    def load_data(self):
+        """Load the directives data from file."""
+        try:
+            with open(self.data_file, "r") as f:
+                self.data = json.load(f)
+            self.process_data()
+        except FileNotFoundError:
+            self.exit(f"Error: File '{self.data_file}' not found.")
+        except json.JSONDecodeError as e:
+            self.exit(f"Error: Invalid JSON in '{self.data_file}': {e}")
+        except Exception as e:
+            self.exit(f"Error loading '{self.data_file}': {e}")
+
+    def process_data(self):
+        """Process data into a flat list for the ListView."""
+        self.items = []
+
+        if not self.data:
+            return
+
+        # Process roles
+        if self.data.get("roles"):
+            for role_name, role_data in sorted(self.data["roles"].items()):
+                display_name = f"[Role] {self._format_name(role_name)}"
+                self.items.append(
+                    {
+                        "display_name": display_name,
+                        "type": "role",
+                        "name": role_name,
+                        "data": role_data,
+                    }
+                )
+
+        # Process directives - flatten the hierarchy
+        directives = self.data.get("directives", {})
+        for impl_name, spec in directives.items():
+            self.items.append(
+                {
+                    "display_name": impl_name.split(".")[-1],
+                    "type": "directive",
+                    "name": impl_name,
+                    "data": spec,
+                    "group": "Directive",
+                    "class_name": impl_name,
+                }
+            )
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        with Horizontal():
+            with Vertical(id="list-container"):
+                yield ListView(id="directives-list")
+
+            with Vertical(id="content-container"):
+                with Vertical(id="markdown-container"):
+                    yield Markdown(
+                        "Select a directive to view its documentation.",
+                        id="docs-markdown",
+                    )
+                yield TextArea(
+                    "Raw documentation will appear here.",
+                    read_only=True,
+                    show_line_numbers=False,
+                    id="raw-text",
+                )
+
+        yield Footer()
+
+    async def on_mount(self) -> None:
+        """Called when app starts."""
+        await self.populate_list()
+
+    async def populate_list(self) -> None:
+        """Populate the ListView with directive items."""
+        list_view = self.query_one("#directives-list", ListView)
+        await list_view.clear()
+
+        if not self.items:
+            await list_view.append(ListItem(Label("No directives found.")))
+            return
+
+        for index, item in enumerate(self.items):
+            list_item = ListItem(
+                Label(item["display_name"], classes="directive-item"),
+                id=f"item-{index}",
+            )
+            # Store the item data in the ListItem for easy access
+            list_item._item_data = item
+            await list_view.append(list_item)
+
+    def _format_name(self, name: str) -> str:
+        """Format a class/module name for display."""
+        return name.split(".")[-1]
+
+    async def on_list_view_highlighted(self, event: ListView.Selected) -> None:
+        """Handle list item selection."""
+        if not hasattr(event.item, "_item_data"):
+            return
+
+        item_data = event.item._item_data
+        markdown_widget = self.query_one("#docs-markdown", Markdown)
+        raw_widget = self.query_one("#raw-text", TextArea)
+
+        # Get the documentation
+        data = item_data.get("data", {})
+        documentation = data.get("documentation", "No documentation available.")
+
+        text = "\n".join(documentation)
+        raw_widget.text = text
+        await markdown_widget.update(text)
+
+    async def action_reload(self) -> None:
+        """Reload the data and refresh the list."""
+        self.load_data()
+        await self.populate_list()
+
+        markdown_widget = self.query_one("#docs-markdown", Markdown)
+        await markdown_widget.update(
+            "Data reloaded. Select a directive to view its documentation."
+        )
+
+
+def main():
+    """Main entry point."""
+    import sys
+
+    if len(sys.argv) != 2:
+        print("Usage: python rst_browser.py <json_file>")
+        print("Example: python rst_browser.py directives_data.json")
+        sys.exit(1)
+
+    data_file = sys.argv[1]
+    app = DirectivesBrowserApp(data_file)
+    app.run()
+
 
 if __name__ == "__main__":
-    args = cli.parse_args()
-    DocViewer.run(title="Documentation Viewer", filenames=args.files)
+    main()
