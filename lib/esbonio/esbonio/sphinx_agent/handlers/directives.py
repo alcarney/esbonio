@@ -19,6 +19,7 @@ DIRECTIVES_TABLE = Database.Table(
         Database.Column(name="implementation", dtype="TEXT"),
         Database.Column(name="location", dtype="JSON"),
         Database.Column(name="argument_providers", dtype="JSON"),
+        Database.Column(name="option_providers", dtype="JSON"),
     ],
 )
 
